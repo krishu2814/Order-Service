@@ -35,15 +35,22 @@ product-service/
 │
 ├── src/
 │   ├── controller/
-│   │   └── product-controller.js
+│   │        └── product-controller.js
 │   ├── routes/
 │   │   └── v1/
-│   │       └── product-routes.js
+│   │        └── product-routes.js
 │   ├── models/
-│   │   └── product-model.js
-│   ├── services/
+│   │        └── product-model.js
+│   ├── service/
+|   ├── producer/
+|   |        └── event-producer.js
+|   ├── consumer/
+|   |        └── event-consumer.js
+|   |        └── order-consumer.js
 │   ├── repository/
 │   └── config/
+|   |        └── rabbitmq.js
+|   |__ index.js
 │
 ├── package.json
 ├── .env
@@ -144,8 +151,8 @@ This service is part of a larger system:
 
 * Product Service ✅
 * User Service ✅
-* Cart Service 🚧
-* Order Service 🚧
+* Cart Service ✅
+* Order Service ✅
 * Payment Service 🚧
 * Notification Service 🚧
 * API Gateway 🚧
@@ -210,8 +217,8 @@ src/
  ├── config/
  │    └── rabbitmq.js
  │
- ├── producers/
+ ├── producer/
  │    └── event-producer.js
  │
- ├── consumers/
+ ├── consumer/
  │    └── event-consumer.js
