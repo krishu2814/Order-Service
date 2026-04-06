@@ -206,3 +206,12 @@ git push origin feature/NewFeature
 🐙 GitHub: https://github.com/krishu2814
 
 ---
+src/
+ ├── config/
+ │    └── rabbitmq.js
+ │
+ ├── producers/
+ │    └── event-producer.js
+ │
+ ├── consumers/
+ │    └── event-consumer.js
