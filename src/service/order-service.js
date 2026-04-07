@@ -89,8 +89,8 @@ class OrderService {
             orderStatus: 'PENDING',
             paymentStatus: 'PENDING'
         });
-       
-
+            
+        // 5. Publish Event
         await publishEvent('ORDER_CREATED', {
             orderId: order._id,
             userId,
@@ -101,10 +101,18 @@ class OrderService {
         // 6. Clear Cart
         await this.clearCart(token);
 
+        // 7. Return Order
         return order;
 
     }
 
+    async getOrderById(orderId) {
+        return await this.orderRepository.getOrderById(orderId);
+    }
+
+    async updateOrder(orderId, data) {
+        return await this.orderRepository.updateOrder(orderId, data);
+    }
 }
 
 module.exports = OrderService;
