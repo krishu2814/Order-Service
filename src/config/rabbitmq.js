@@ -9,11 +9,10 @@ const connectRabbitMQ = async () => {
     try {
         connection = await amqp.connect(RABBITMQ_URL);
         channel = await connection.createChannel();
-
-        console.log('✅ RabbitMQ Connected');
+        console.log('RabbitMQ Connected');
 
     } catch (error) {
-        console.error('RabbitMQ Connection Failed:', error.message);
+        // console.error('RabbitMQ Connection Failed:', error.message);
         throw error; // fail fast
     }
 };
@@ -36,7 +35,7 @@ const publishEvent = async (queue, data) => {
         Buffer.from(JSON.stringify(data))
     );
 
-    console.log(`Event sent to ${queue}`);
+    // console.log(`Event sent to ${queue}`);
 };
 
 module.exports = {

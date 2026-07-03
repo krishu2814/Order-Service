@@ -9,16 +9,16 @@ class OrderController {
     async placeOrder(req, res) {
         try {
             const token = req.headers.authorization;
-            console.log('Received Token:', token);
+            // console.log('Received Token:', token);
             const userId = req.body.userId;
-            console.log('User ID from Token:', userId);
+            // console.log('User ID from Token:', userId);
 
             const order = await this.orderService.placeOrder(
                 token,
                 userId,
                 req.body.deliveryAddress
             );
-            console.log('Order Placed:', order);
+            // console.log('Order Placed:', order);
 
             res.status(201).json({
                 success: true,
@@ -28,7 +28,7 @@ class OrderController {
             });
 
         } catch (error) {
-            console.error('Error placing order:', error.message);
+            // console.error('Error placing order:', error.message);
             res.status(400).json({
                 success: false,
                 data: {},
@@ -60,7 +60,7 @@ class OrderController {
             });
 
         } catch (error) {
-            console.error('Error retrieving order:', error.message);
+            // console.error('Error retrieving order:', error.message);
             res.status(400).json({
                 success: false,
                 data: {},
@@ -94,7 +94,7 @@ class OrderController {
             });
 
         } catch (error) {
-            console.error('Error updating order:', error.message);
+            // console.error('Error updating order:', error.message);
             res.status(400).json({
                 success: false,
                 data: {},

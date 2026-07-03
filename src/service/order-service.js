@@ -12,6 +12,7 @@ class OrderService {
         return `ORD-${Date.now()}`;
     }
 
+    // items -> can have multiple products with quantity and price
     calculateTotal(items) { 
         return items.reduce((total, item) => {
             return total + item.price * item.quantity;
@@ -19,31 +20,21 @@ class OrderService {
     }
 
     async getCart(token) {
-        const response = await axios.get(
-            `${CART_SERVICE_URL}/api/v1/cart`,
-            {
-                headers: { Authorization: token }
-            }
-        );
+        const response = await axios.get(`${CART_SERVICE_URL}/api/v1/cart`,{headers: { Authorization: token }});
         return response.data.data;
     }
 
     async getProduct(productId) {
-        const response = await axios.get(
-            `${PRODUCT_SERVICE_URL}/api/v1/products/${productId}`
-        );
+        const response = await axios.get(`${PRODUCT_SERVICE_URL}/api/v1/${productId}`);
         // console.log('Product details:', response.data.data);
         return response.data.data;
     }
-
-    async clearCart(token) {
-        await axios.delete(
-            `${CART_SERVICE_URL}/api/v1/cart`,
-            {
-                headers: { Authorization: token }
-            }
-        );
-    }
+    /**
+     * This will be triggered by the event from Payment Service after successful payment.
+     */
+    // async clearCart(token) {
+    //     await axios.delete(`${CART_SERVICE_URL}/api/v1/`,{headers: { Authorization: token }});
+    // }
 
     async placeOrder(token, userId, deliveryAddress) {
 
@@ -92,6 +83,7 @@ class OrderService {
             
         // 5. Publish Event
         await publishEvent('ORDER_CREATED', {
+            event: 'ORDER_CREATED',
             orderId: order._id,
             userId,
             amount: totalAmount,
@@ -99,7 +91,9 @@ class OrderService {
         });
 
         // 6. Clear Cart
-        await this.clearCart(token);
+        // Note: Commented out the clearCart function to avoid clearing the cart immediately after order placement.
+        // RabbitMQ event will handle the cart clearing after successful payment and order processing.
+        // await this.clearCart(token);
 
         // 7. Return Order
         return order;
@@ -110,9 +104,9 @@ class OrderService {
         return await this.orderRepository.getOrderById(orderId);
     }
 
-    async updateOrder(orderId, data) {
-        return await this.orderRepository.updateOrder(orderId, data);
-    }
+    // async updateOrder(orderId, data) {
+    //     return await this.orderRepository.updateOrder(orderId, data);
+    // }
 }
 
 module.exports = OrderService;
