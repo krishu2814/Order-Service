@@ -1,61 +1,80 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const orderSchema = new mongoose.Schema({
+const orderSchema = new mongoose.Schema(
+  {
     userId: {
-        type: String,
-        required: true,
-        index: true
+      type: String,
+      required: true,
+      index: true,
     },
+
     orderNumber: {
-        type: String,
-        unique: true
+      type: String,
+      unique: true,
     },
+
     items: [
-        {
-            productId: {
-                type: mongoose.Schema.Types.ObjectId,
-                required: true
-            },
-            name: {
-                type: String
-            },
-            quantity: {
-                type: Number,
-                required: true
-            },
-            price: {
-                type: Number,
-                required: true
-            }
-        }
+      {
+        productId: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: true,
+        },
+
+        name: {
+          type: String,
+        },
+
+        quantity: {
+          type: Number,
+          required: true,
+          min: [1, "Quantity must be at least 1"],
+        },
+
+        price: {
+          type: Number,
+          required: true,
+        },
+      },
     ],
+
     totalAmount: {
-        type: Number,
-        required: true
+      type: Number,
+      required: true,
     },
+
     orderStatus: {
-        type: String,
-        enum: ['PENDING', 'PLACED', 'CONFIRMED', 'CANCELLED', 'DELIVERED'],
-        default: 'PENDING',
-        index: true
+      type: String,
+      enum: [
+        "PENDING",
+        "READY_FOR_PAYMENT",
+        "CONFIRMED",
+        "CANCELLED",
+        "DELIVERED",
+      ],
+      default: "PENDING",
+      index: true,
     },
+
     paymentStatus: {
-        type: String,
-        enum: ['PENDING', 'SUCCESS', 'FAILED'],
-        default: 'PENDING'
+      type: String,
+      enum: ["PENDING", "SUCCESS", "FAILED"],
+      default: "PENDING",
     },
+
     transactionId: {
-        type: String
+      type: String,
     },
+
     deliveryAddress: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
-    
-}, { timestamps: true });
+  },
+  { timestamps: true },
+);
 
 orderSchema.index({ createdAt: -1 });
 
-const Order = mongoose.model('Order', orderSchema);
+const Order = mongoose.model("Order", orderSchema);
 
 module.exports = Order;

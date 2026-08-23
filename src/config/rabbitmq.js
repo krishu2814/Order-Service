@@ -1,45 +1,54 @@
-const amqp = require('amqplib');
-const { RABBITMQ_URL } = require('./serverConfig');
+const amqp = require("amqplib");
+const { RABBITMQ_URL } = require("./serverConfig");
 
-let connection = null;
-let channel = null;
+let connection;
+let channel;
 
-// Connect to RabbitMQ
+const EXCHANGE_NAME = "ecommerce_events";
+
 const connectRabbitMQ = async () => {
     try {
         connection = await amqp.connect(RABBITMQ_URL);
         channel = await connection.createChannel();
-        console.log('RabbitMQ Connected');
-
+        await channel.assertExchange(EXCHANGE_NAME, "topic", {
+            durable: true,
+        });
+        console.log("RabbitMQ Connected");
     } catch (error) {
-        // console.error('RabbitMQ Connection Failed:', error.message);
-        throw error; // fail fast
+        console.error("RabbitMQ connection failed:", error.message);
+        throw error;
     }
 };
 
-// Get Channel
 const getChannel = () => {
     if (!channel) {
-        throw new Error('RabbitMQ not connected!');
+        throw new Error("RabbitMQ channel not initialized");
     }
     return channel;
 };
 
-const publishEvent = async (queue, data) => {
-    const ch = getChannel(); // always use same instance
+const publishEvent = async (routingKey, data) => {
+    const channel = getChannel();
 
-    await ch.assertQueue(queue, { durable: true });
+    if (typeof routingKey !== "string") {
+        throw new Error(`Invalid routing key: ${routingKey}`);
+    }
 
-    ch.sendToQueue(
-        queue,
-        Buffer.from(JSON.stringify(data))
+    channel.publish(
+        EXCHANGE_NAME,
+        routingKey,
+        Buffer.from(JSON.stringify(data)),
+        {
+            persistent: true,
+            contentType: "application/json",
+        }
     );
 
-    // console.log(`Event sent to ${queue}`);
+    console.log(`Event published: ${routingKey}`);
 };
 
 module.exports = {
     connectRabbitMQ,
     getChannel,
-    publishEvent
+    publishEvent,
 };

@@ -1,42 +1,67 @@
-const { startConsumer } = require('./event-consumer');
-const OrderRepository = require('../repository/order-repository');
-const { publishEvent } = require('../config/rabbitmq');
+const { startConsumer } = require("./event-consumer");
+const OrderRepository = require("../repository/order-repository");
+const { publishEvent } = require("../config/rabbitmq");
 
 const orderRepository = new OrderRepository();
 
 const initOrderConsumers = async () => {
+  await startConsumer(
+    "order_inventory_reserved_queue",
+    "INVENTORY_RESERVED",
+    async (data) => {
+      const updatedOrder = await orderRepository.updateOrder(data.orderId, {
+        orderStatus: "READY_FOR_PAYMENT",
+      });
 
-    /**
-     * 1. PAYMENT Service -> ORDER Service (PAYMENT_SUCCESS event)
-     * 2. ORDER Service -> publish ORDER_CONFIRMED event to notify other services (like Cart Service, Notification Service, etc.)
-     */
-    
-    await startConsumer('PAYMENT_SUCCESS', async (data) => {
-        // console.log('PAYMENT_SUCCESS received:', data);
+      if (!updatedOrder) {
+        throw new Error(`Order not found: ${data.orderId}`);
+      }
 
-        const updatedOrder = await orderRepository.updateOrder(data.orderId, {
-            orderStatus: 'CONFIRMED',
-            paymentStatus: 'SUCCESS',
-            transactionId: data.transactionId // sent by Payment Service -> Need transactionId for order record
-        });
+      console.log(`Order ready for payment: ${data.orderId}`);
+    },
+  );
 
-        if(!updatedOrder) {
-            throw new Error(`Order not found for ID: ${data.orderId}`);
-        }
+  await startConsumer(
+    "order_inventory_failed_queue",
+    "INVENTORY_FAILED",
+    async (data) => {
+      const updatedOrder = await orderRepository.updateOrder(data.orderId, {
+        orderStatus: "CANCELLED",
+      });
 
-        // 2. AFTER ORDER UPDATE → publish next event
-        await publishEvent('ORDER_CONFIRMED', {
-            event: 'ORDER_CONFIRMED',
-            orderId: data.orderId,
-            userId: data.userId,
-            transactionId: data.transactionId,
-            timestamp: new Date().toISOString()
-        });
+      if (!updatedOrder) {
+        throw new Error(`Order not found: ${data.orderId}`);
+      }
 
-        // console.log('ORDER_CONFIRMED event published');
-    });
+      console.log(`Order cancelled due to inventory failure: ${data.orderId}`);
+    },
+  );
 
-    
+  await startConsumer(
+    "order_payment_queue",
+    "PAYMENT_SUCCESS",
+    async (data) => {
+      const updatedOrder = await orderRepository.updateOrder(data.orderId, {
+        orderStatus: "CONFIRMED",
+        paymentStatus: "SUCCESS",
+        transactionId: data.transactionId,
+      });
+
+      if (!updatedOrder) {
+        throw new Error(`Order not found: ${data.orderId}`);
+      }
+
+      await publishEvent("ORDER_CONFIRMED", {
+        event: "ORDER_CONFIRMED",
+        orderId: data.orderId,
+        userId: data.userId,
+        transactionId: data.transactionId,
+        timestamp: new Date().toISOString(),
+      });
+
+      console.log(`Order confirmed: ${data.orderId}`);
+    },
+  );
 };
 
 module.exports = initOrderConsumers;
