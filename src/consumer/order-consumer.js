@@ -54,8 +54,11 @@ const initOrderConsumers = async () => {
       await publishEvent("ORDER_CONFIRMED", {
         event: "ORDER_CONFIRMED",
         orderId: data.orderId,
-        userId: data.userId,
+        userId: data.userId || updatedOrder.userId,
         transactionId: data.transactionId,
+        totalAmount: updatedOrder.totalAmount,
+        deliveryAddress: updatedOrder.deliveryAddress,
+        items: updatedOrder.items,
         timestamp: new Date().toISOString(),
       });
 
@@ -76,6 +79,14 @@ const initOrderConsumers = async () => {
         console.warn(`Order not found for PAYMENT_FAILED: ${data.orderId}`);
         return;
       }
+
+      await publishEvent("ORDER_CANCELLED", {
+        event: "ORDER_CANCELLED",
+        orderId: data.orderId,
+        userId: updatedOrder.userId,
+        reason: data.reason || "Payment transaction was declined",
+        timestamp: new Date().toISOString(),
+      });
 
       console.log(`[Order Service] Order ${data.orderId} marked CANCELLED due to PAYMENT_FAILED`);
     },
@@ -99,6 +110,14 @@ const initOrderConsumers = async () => {
       ) {
         await orderRepository.updateOrder(data.orderId, {
           orderStatus: "CANCELLED",
+        });
+
+        await publishEvent("ORDER_CANCELLED", {
+          event: "ORDER_CANCELLED",
+          orderId: data.orderId,
+          userId: existingOrder.userId,
+          reason: "Order payment window expired (15 minutes limit)",
+          timestamp: new Date().toISOString(),
         });
 
         console.log(`[Order Service] Order ${data.orderId} marked CANCELLED due to RESERVATION_EXPIRED`);
