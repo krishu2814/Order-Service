@@ -27,12 +27,21 @@ const getChannel = () => {
     return channel;
 };
 
-const publishEvent = async (routingKey, data) => {
+const crypto = require("crypto");
+
+const publishEvent = async (routingKey, data, options = {}) => {
     const channel = getChannel();
 
     if (typeof routingKey !== "string") {
         throw new Error(`Invalid routing key: ${routingKey}`);
     }
+
+    const correlationId =
+        options.correlationId ||
+        data.correlationId ||
+        `amqp_${crypto.randomUUID()}`;
+
+    data.correlationId = correlationId;
 
     channel.publish(
         EXCHANGE_NAME,
@@ -41,10 +50,15 @@ const publishEvent = async (routingKey, data) => {
         {
             persistent: true,
             contentType: "application/json",
+            correlationId,
+            headers: {
+                "x-correlation-id": correlationId,
+                ...(options.headers || {}),
+            },
         }
     );
 
-    console.log(`Event published: ${routingKey}`);
+    console.log(`[${correlationId}] [Order-Service] Event published: ${routingKey}`);
 };
 
 module.exports = {

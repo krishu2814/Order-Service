@@ -74,19 +74,32 @@ const startConsumer = async (
       const headers = message.properties.headers || {};
       const retryCount = Number(headers["x-retry-count"] || 0);
 
+      let data = null;
       try {
-        const data = JSON.parse(message.content.toString());
+        data = JSON.parse(message.content.toString());
+      } catch (e) {
+        data = {};
+      }
 
+      const correlationId =
+        message.properties.correlationId ||
+        headers["x-correlation-id"] ||
+        data?.correlationId ||
+        "corr_unknown";
+
+      data.correlationId = data.correlationId || correlationId;
+
+      try {
         // Execute domain handler
         await handler(data, message);
 
         // Acknowledge successfully processed message
         channel.ack(message);
 
-        console.log(`[Order Consumer] Successfully processed ${routingKey} on ${queueName}`);
+        console.log(`[${correlationId}] [Order Consumer] Successfully processed ${routingKey} on ${queueName}`);
       } catch (error) {
         console.error(
-          `[Order Consumer Error] Error processing ${routingKey} on ${queueName}: ${error.message}`,
+          `[${correlationId}] [Order Consumer Error] Error processing ${routingKey} on ${queueName}: ${error.message}`,
         );
 
         if (retryCount < maxRetries) {
@@ -99,8 +112,10 @@ const startConsumer = async (
             channel.sendToQueue(retryQueueName, message.content, {
               persistent: true,
               contentType: "application/json",
+              correlationId,
               headers: {
                 ...headers,
+                "x-correlation-id": correlationId,
                 "x-retry-count": nextRetry,
                 "x-original-queue": queueName,
                 "x-error-message": error.message,
@@ -109,21 +124,21 @@ const startConsumer = async (
             });
 
             console.warn(
-              `[Order Retry ${nextRetry}/${maxRetries}] Message in ${queueName} scheduled for retry in ${delayMs}ms via ${retryQueueName}`,
+              `[${correlationId}] [Order Retry ${nextRetry}/${maxRetries}] Message in ${queueName} scheduled for retry in ${delayMs}ms via ${retryQueueName}`,
             );
 
             channel.ack(message);
           } catch (retryErr) {
             console.error(
-              `[Order Retry Failure] Could not schedule retry for ${queueName}:`,
+              `[${correlationId}] [Order Retry Failure] Could not schedule retry for ${queueName}:`,
               retryErr.message,
             );
-            routeToDLQ(channel, message, queueName, dlqRoutingKey, error, retryCount);
+            routeToDLQ(channel, message, queueName, dlqRoutingKey, error, retryCount, correlationId);
             channel.ack(message);
           }
         } else {
           // Retries exhausted -> route to DLQ
-          routeToDLQ(channel, message, queueName, dlqRoutingKey, error, retryCount);
+          routeToDLQ(channel, message, queueName, dlqRoutingKey, error, retryCount, correlationId);
           channel.ack(message);
         }
       }
@@ -135,8 +150,9 @@ const startConsumer = async (
 /**
  * Publishes failed message to DLX stamped with failure audit metadata.
  */
-function routeToDLQ(channel, message, queueName, dlqRoutingKey, error, retryCount) {
+function routeToDLQ(channel, message, queueName, dlqRoutingKey, error, retryCount, correlationId) {
   const headers = message.properties.headers || {};
+  const corrId = correlationId || message.properties.correlationId || headers["x-correlation-id"] || "corr_unknown";
 
   channel.publish(
     DLX_EXCHANGE,
@@ -145,8 +161,10 @@ function routeToDLQ(channel, message, queueName, dlqRoutingKey, error, retryCoun
     {
       persistent: true,
       contentType: "application/json",
+      correlationId: corrId,
       headers: {
         ...headers,
+        "x-correlation-id": corrId,
         "x-retry-count": retryCount,
         "x-original-queue": queueName,
         "x-error-message": error.message,
@@ -157,7 +175,7 @@ function routeToDLQ(channel, message, queueName, dlqRoutingKey, error, retryCoun
   );
 
   console.error(
-    `[Order DLQ ALERT] Retries exhausted for message in ${queueName}. Routed to ${queueName}_dlq with routing key ${dlqRoutingKey}`,
+    `[${corrId}] [Order DLQ ALERT] Retries exhausted for message in ${queueName}. Routed to ${queueName}_dlq with routing key ${dlqRoutingKey}`,
   );
 }
 
