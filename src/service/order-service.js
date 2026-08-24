@@ -91,6 +91,45 @@ class OrderService {
   async getOrderById(orderId) {
     return await this.orderRepository.getOrderById(orderId);
   }
+
+  async getUserOrders(userId) {
+    return await this.orderRepository.getOrdersByUserId(userId);
+  }
+
+  async cancelOrder(orderId, userId) {
+    const order = await this.orderRepository.getOrderById(orderId);
+
+    if (!order) {
+      throw new Error("Order not found");
+    }
+
+    if (String(order.userId) !== String(userId)) {
+      throw new Error("Unauthorized: You do not have permission to cancel this order");
+    }
+
+    if (order.orderStatus === "CANCELLED") {
+      return order; // idempotent
+    }
+
+    if (order.orderStatus === "CONFIRMED" || order.orderStatus === "DELIVERED") {
+      throw new Error(`Cannot cancel order in ${order.orderStatus} status`);
+    }
+
+    const updatedOrder = await this.orderRepository.updateOrder(orderId, {
+      orderStatus: "CANCELLED",
+      paymentStatus: order.paymentStatus === "SUCCESS" ? "REFUNDED" : "CANCELLED",
+    });
+
+    await publishEvent("ORDER_CANCELLED", {
+      event: "ORDER_CANCELLED",
+      orderId: order._id,
+      userId: order.userId,
+      items: order.items,
+      timestamp: new Date().toISOString(),
+    });
+
+    return updatedOrder;
+  }
 }
 
 module.exports = OrderService;

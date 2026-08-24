@@ -11,13 +11,19 @@ router.post(
   orderController.placeOrder.bind(orderController),
 );
 router.get(
+  "/",
+  AuthenticUser,
+  orderController.getUserOrders.bind(orderController),
+);
+router.get(
   "/:id",
   AuthenticUser,
   orderController.getOrderById.bind(orderController),
 );
-/**
- * Now will not allow updating order directly from API, as it should be done via events from Payment Service
- */
-// router.patch('/:id', orderController.updateOrder.bind(orderController));
+router.post(
+  "/:id/cancel",
+  AuthenticUser,
+  orderController.cancelOrder.bind(orderController),
+);
 
 module.exports = router;

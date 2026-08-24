@@ -8,9 +8,7 @@ class OrderController {
   async placeOrder(req, res) {
     try {
       const token = req.headers.authorization;
-      const userId = req.user.userId;
-
-      // console.log(`User ID: ${userId}`);
+      const userId = req.user.id || req.user.userId;
 
       const order = await this.orderService.placeOrder(
         token,
@@ -21,7 +19,7 @@ class OrderController {
       res.status(201).json({
         success: true,
         data: order,
-        message: "Order placed successfully . Complete the payment to proceed",
+        message: "Order placed successfully. Complete the payment to proceed",
         error: {},
       });
     } catch (error) {
@@ -59,6 +57,56 @@ class OrderController {
         success: false,
         data: {},
         message: "Failed to retrieve order",
+        error: error.message,
+      });
+    }
+  }
+
+  async getUserOrders(req, res) {
+    try {
+      const userId = req.user.id || req.user.userId;
+      const orders = await this.orderService.getUserOrders(userId);
+
+      return res.status(200).json({
+        success: true,
+        data: orders,
+        message: "Orders retrieved successfully",
+        error: {},
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        data: {},
+        message: "Failed to retrieve orders",
+        error: error.message,
+      });
+    }
+  }
+
+  async cancelOrder(req, res) {
+    try {
+      const orderId = req.params.id;
+      const userId = req.user.id || req.user.userId;
+
+      const order = await this.orderService.cancelOrder(orderId, userId);
+
+      return res.status(200).json({
+        success: true,
+        data: order,
+        message: "Order cancelled successfully",
+        error: {},
+      });
+    } catch (error) {
+      const isNotFound = error.message.includes("not found");
+      const isForbidden =
+        error.message.includes("Unauthorized") ||
+        error.message.includes("permission");
+      const statusCode = isNotFound ? 404 : isForbidden ? 403 : 400;
+
+      return res.status(statusCode).json({
+        success: false,
+        data: {},
+        message: "Failed to cancel order",
         error: error.message,
       });
     }
