@@ -14,6 +14,7 @@ class OrderController {
         token,
         userId,
         req.body.deliveryAddress,
+        req.body.couponCode,
       );
 
       res.status(201).json({

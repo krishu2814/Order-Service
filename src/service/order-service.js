@@ -1,4 +1,5 @@
 const OrderRepository = require("../repository/order-repository");
+const CouponService = require("./coupon-service");
 const axios = require("axios");
 const {
   CART_SERVICE_URL,
@@ -9,6 +10,7 @@ const { publishEvent } = require("../config/rabbitmq");
 class OrderService {
   constructor() {
     this.orderRepository = new OrderRepository();
+    this.couponService = new CouponService();
   }
 
   generateOrderNumber() {
@@ -36,12 +38,10 @@ class OrderService {
       `${PRODUCT_SERVICE_URL}/api/v1/${productId}`,
     );
 
-    // console.log("Product details:", response.data.data);
-
     return response.data.data;
   }
 
-  async placeOrder(token, userId, deliveryAddress) {
+  async placeOrder(token, userId, deliveryAddress, couponCode = null) {
     const cart = await this.getCart(token);
 
     if (!cart || cart.items.length === 0) {
@@ -65,13 +65,32 @@ class OrderService {
       });
     }
 
-    const totalAmount = this.calculateTotal(orderItems);
+    const originalTotal = this.calculateTotal(orderItems);
+    let finalTotal = originalTotal;
+    let discountAmount = 0;
+    let appliedCoupon = null;
+
+    if (couponCode) {
+      const discountResult = await this.couponService.validateAndCalculateDiscount(
+        couponCode,
+        originalTotal,
+        userId,
+      );
+      if (discountResult.isValid) {
+        discountAmount = discountResult.discountAmount;
+        finalTotal = discountResult.finalAmount;
+        appliedCoupon = discountResult.couponCode;
+      }
+    }
 
     const order = await this.orderRepository.createOrder({
       userId,
       orderNumber: this.generateOrderNumber(),
       items: orderItems,
-      totalAmount,
+      originalAmount: originalTotal,
+      discountAmount,
+      couponCode: appliedCoupon,
+      totalAmount: finalTotal,
       deliveryAddress,
       orderStatus: "PENDING",
       paymentStatus: "PENDING",
@@ -81,7 +100,7 @@ class OrderService {
       event: "ORDER_CREATED",
       orderId: order._id,
       userId,
-      amount: totalAmount,
+      amount: finalTotal,
       items: orderItems,
     });
 

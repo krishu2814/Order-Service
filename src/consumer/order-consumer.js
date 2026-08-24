@@ -47,8 +47,14 @@ const initOrderConsumers = async () => {
         transactionId: data.transactionId,
       });
 
-      if (!updatedOrder) {
-        throw new Error(`Order not found: ${data.orderId}`);
+      if (updatedOrder.couponCode) {
+        const CouponService = require("../service/coupon-service");
+        const couponService = new CouponService();
+        await couponService.recordCouponUsage(
+          updatedOrder.couponCode,
+          updatedOrder.userId,
+          updatedOrder._id,
+        );
       }
 
       await publishEvent("ORDER_CONFIRMED", {
