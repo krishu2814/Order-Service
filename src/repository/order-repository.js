@@ -15,7 +15,7 @@ class OrderRepository {
     }
 
     async updateOrder(orderId, data) {
-        return await Order.findByIdAndUpdate(orderId, data, { new: true });
+        return await Order.findByIdAndUpdate(orderId, data, { returnDocument: "after" });
     }
 
 }

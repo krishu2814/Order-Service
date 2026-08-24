@@ -62,6 +62,49 @@ const initOrderConsumers = async () => {
       console.log(`Order confirmed: ${data.orderId}`);
     },
   );
+
+  await startConsumer(
+    "order_payment_failed_queue",
+    "PAYMENT_FAILED",
+    async (data) => {
+      const updatedOrder = await orderRepository.updateOrder(data.orderId, {
+        orderStatus: "CANCELLED",
+        paymentStatus: "FAILED",
+      });
+
+      if (!updatedOrder) {
+        console.warn(`Order not found for PAYMENT_FAILED: ${data.orderId}`);
+        return;
+      }
+
+      console.log(`[Order Service] Order ${data.orderId} marked CANCELLED due to PAYMENT_FAILED`);
+    },
+  );
+
+  await startConsumer(
+    "order_reservation_expired_queue",
+    "RESERVATION_EXPIRED",
+    async (data) => {
+      const existingOrder = await orderRepository.getOrderById(data.orderId);
+
+      if (!existingOrder) {
+        console.warn(`Order not found for RESERVATION_EXPIRED: ${data.orderId}`);
+        return;
+      }
+
+      // Only cancel if order is still PENDING or READY_FOR_PAYMENT
+      if (
+        existingOrder.orderStatus === "PENDING" ||
+        existingOrder.orderStatus === "READY_FOR_PAYMENT"
+      ) {
+        await orderRepository.updateOrder(data.orderId, {
+          orderStatus: "CANCELLED",
+        });
+
+        console.log(`[Order Service] Order ${data.orderId} marked CANCELLED due to RESERVATION_EXPIRED`);
+      }
+    },
+  );
 };
 
 module.exports = initOrderConsumers;
