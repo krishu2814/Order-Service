@@ -1,10 +1,8 @@
 const amqp = require("amqplib");
-const { RABBITMQ_URL } = require("./serverConfig");
+const { RABBITMQ_URL, EXCHANGE_NAME = "ecommerce_events" } = require("./serverConfig");
 
 let connection;
 let channel;
-
-const EXCHANGE_NAME = "ecommerce_events";
 
 const connectRabbitMQ = async () => {
     try {
