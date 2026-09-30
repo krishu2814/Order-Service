@@ -10,11 +10,18 @@ class OrderController {
       const token = req.headers.authorization;
       const userId = req.user.id || req.user.userId;
 
+      const rawAddress = req.body.deliveryAddress || req.body.shippingAddress;
+      const deliveryAddress =
+        typeof rawAddress === "object" && rawAddress !== null
+          ? `${rawAddress.fullName ? rawAddress.fullName + ", " : ""}${rawAddress.address || ""}, ${rawAddress.city || ""}, ${rawAddress.state || ""} ${rawAddress.postalCode || ""}, ${rawAddress.country || ""}`.trim()
+          : String(rawAddress || "Standard Delivery");
+
       const order = await this.orderService.placeOrder(
         token,
         userId,
-        req.body.deliveryAddress,
+        deliveryAddress,
         req.body.couponCode,
+        req.body.items,
       );
 
       res.status(201).json({

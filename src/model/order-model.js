@@ -16,7 +16,7 @@ const orderSchema = new mongoose.Schema(
     items: [
       {
         productId: {
-          type: mongoose.Schema.Types.ObjectId,
+          type: mongoose.Schema.Types.Mixed,
           required: true,
         },
 
@@ -81,7 +81,7 @@ const orderSchema = new mongoose.Schema(
     },
 
     deliveryAddress: {
-      type: String,
+      type: mongoose.Schema.Types.Mixed,
       required: true,
     },
   },

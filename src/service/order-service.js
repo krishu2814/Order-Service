@@ -41,24 +41,55 @@ class OrderService {
     return response.data.data;
   }
 
-  async placeOrder(token, userId, deliveryAddress, couponCode = null) {
-    const cart = await this.getCart(token);
+  async placeOrder(token, userId, deliveryAddress, couponCode = null, clientItems = null) {
+    let itemsToProcess = [];
+    if (Array.isArray(clientItems) && clientItems.length > 0) {
+      itemsToProcess = clientItems;
+    } else {
+      try {
+        const cart = await this.getCart(token);
+        if (cart && Array.isArray(cart.items) && cart.items.length > 0) {
+          itemsToProcess = cart.items;
+        }
+      } catch (err) {
+        // Fallback if cart service is not available
+      }
+    }
 
-    if (!cart || cart.items.length === 0) {
+    if (!itemsToProcess || itemsToProcess.length === 0) {
       throw new Error("Cart is empty");
     }
 
     const orderItems = [];
 
-    for (const item of cart.items) {
-      const product = await this.getProduct(item.productId);
+    for (const item of itemsToProcess) {
+      let product = null;
+      try {
+        product = await this.getProduct(item.productId);
+      } catch (err) {
+        if (item.name && item.price) {
+          product = {
+            _id: item.productId,
+            name: item.name,
+            price: item.price,
+          };
+        }
+      }
 
       if (!product) {
-        throw new Error(`Product not found: ${item.productId}`);
+        if (item.name && item.price) {
+          product = {
+            _id: item.productId,
+            name: item.name,
+            price: item.price,
+          };
+        } else {
+          throw new Error(`Product not found: ${item.productId}`);
+        }
       }
 
       orderItems.push({
-        productId: product._id,
+        productId: product._id || item.productId,
         name: product.name,
         quantity: item.quantity,
         price: product.price,
