@@ -55,7 +55,8 @@ class CouponController {
 
   async validateCoupon(req, res) {
     try {
-      const { code, amount } = req.body;
+      const code = req.body.code || req.body.couponCode;
+      const amount = req.body.amount || req.body.orderAmount || req.body.totalAmount;
       const userId = req.user?.id || req.user?.userId;
 
       const result = await this.couponService.validateAndCalculateDiscount(

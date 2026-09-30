@@ -92,8 +92,10 @@ class CouponService {
     return {
       isValid: true,
       couponCode: coupon.code,
+      code: coupon.code,
       discountType: coupon.discountType,
       discountValue: coupon.discountValue,
+      discountPercent: coupon.discountType === "PERCENTAGE" ? coupon.discountValue : 0,
       discountAmount,
       originalAmount: amount,
       finalAmount,

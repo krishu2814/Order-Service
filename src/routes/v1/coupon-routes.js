@@ -8,5 +8,6 @@ const couponController = new CouponController();
 router.post("/", AuthenticUser, couponController.createCoupon.bind(couponController));
 router.get("/", AuthenticUser, couponController.getActiveCoupons.bind(couponController));
 router.post("/validate", AuthenticUser, couponController.validateCoupon.bind(couponController));
+router.post("/apply", AuthenticUser, couponController.validateCoupon.bind(couponController));
 
 module.exports = router;
