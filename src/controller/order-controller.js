@@ -1,11 +1,12 @@
 const OrderService = require("../service/order-service");
+const { NotFoundError } = require("../utils/errors/app-error");
 
 class OrderController {
   constructor() {
     this.orderService = new OrderService();
   }
 
-  async placeOrder(req, res) {
+  async placeOrder(req, res, next) {
     try {
       const token = req.headers.authorization;
       const userId = req.user.id || req.user.userId;
@@ -24,53 +25,38 @@ class OrderController {
         req.body.items,
       );
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         data: order,
         message: "Order placed successfully. Complete the payment to proceed",
         error: {},
       });
     } catch (error) {
-      res.status(400).json({
-        success: false,
-        data: {},
-        message: "Failed to place order",
-        error: error.message,
-      });
+      next(error);
     }
   }
 
-  async getOrderById(req, res) {
+  async getOrderById(req, res, next) {
     try {
       const orderId = req.params.id;
       const order = await this.orderService.getOrderById(orderId);
 
       if (!order) {
-        return res.status(404).json({
-          success: false,
-          data: {},
-          message: "Order not found",
-          error: {},
-        });
+        throw new NotFoundError(`Order not found with ID: ${orderId}`, "ORDER_NOT_FOUND");
       }
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         data: order,
         message: "Order retrieved successfully",
         error: {},
       });
     } catch (error) {
-      res.status(400).json({
-        success: false,
-        data: {},
-        message: "Failed to retrieve order",
-        error: error.message,
-      });
+      next(error);
     }
   }
 
-  async getUserOrders(req, res) {
+  async getUserOrders(req, res, next) {
     try {
       const userId = req.user.id || req.user.userId;
       const orders = await this.orderService.getUserOrders(userId);
@@ -82,16 +68,11 @@ class OrderController {
         error: {},
       });
     } catch (error) {
-      return res.status(500).json({
-        success: false,
-        data: {},
-        message: "Failed to retrieve orders",
-        error: error.message,
-      });
+      next(error);
     }
   }
 
-  async cancelOrder(req, res) {
+  async cancelOrder(req, res, next) {
     try {
       const orderId = req.params.id;
       const userId = req.user.id || req.user.userId;
@@ -105,18 +86,7 @@ class OrderController {
         error: {},
       });
     } catch (error) {
-      const isNotFound = error.message.includes("not found");
-      const isForbidden =
-        error.message.includes("Unauthorized") ||
-        error.message.includes("permission");
-      const statusCode = isNotFound ? 404 : isForbidden ? 403 : 400;
-
-      return res.status(statusCode).json({
-        success: false,
-        data: {},
-        message: "Failed to cancel order",
-        error: error.message,
-      });
+      next(error);
     }
   }
 }

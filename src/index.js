@@ -12,6 +12,10 @@ app.use(require('./middleware/correlation-middleware'));
 
 app.use('/api', apiRoutes);
 
+// Global Error & 404 Handlers
+app.use(require('./middleware/not-found-handler'));
+app.use(require('./middleware/error-handler'));
+
 const setUpAndStartServer = async () => {
 
     await connectDB();

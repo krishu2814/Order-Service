@@ -6,6 +6,11 @@ const {
   PRODUCT_SERVICE_URL,
 } = require("../config/serverConfig");
 const { publishEvent } = require("../config/rabbitmq");
+const {
+  NotFoundError,
+  ForbiddenError,
+  BadRequestError,
+} = require("../utils/errors/app-error");
 
 class OrderService {
   constructor() {
@@ -57,7 +62,7 @@ class OrderService {
     }
 
     if (!itemsToProcess || itemsToProcess.length === 0) {
-      throw new Error("Cart is empty");
+      throw new BadRequestError("Cart is empty", "CART_EMPTY");
     }
 
     const orderItems = [];
@@ -84,7 +89,7 @@ class OrderService {
             price: item.price,
           };
         } else {
-          throw new Error(`Product not found: ${item.productId}`);
+          throw new NotFoundError(`Product not found: ${item.productId}`, "PRODUCT_NOT_FOUND");
         }
       }
 
@@ -150,11 +155,11 @@ class OrderService {
     const order = await this.orderRepository.getOrderById(orderId);
 
     if (!order) {
-      throw new Error("Order not found");
+      throw new NotFoundError(`Order not found with ID: ${orderId}`, "ORDER_NOT_FOUND");
     }
 
     if (String(order.userId) !== String(userId)) {
-      throw new Error("Unauthorized: You do not have permission to cancel this order");
+      throw new ForbiddenError("Unauthorized: You do not have permission to cancel this order", "ORDER_FORBIDDEN");
     }
 
     if (order.orderStatus === "CANCELLED") {
@@ -162,7 +167,7 @@ class OrderService {
     }
 
     if (order.orderStatus === "CONFIRMED" || order.orderStatus === "DELIVERED") {
-      throw new Error(`Cannot cancel order in ${order.orderStatus} status`);
+      throw new BadRequestError(`Cannot cancel order in ${order.orderStatus} status`, "ORDER_STATE_INVALID");
     }
 
     const updatedOrder = await this.orderRepository.updateOrder(orderId, {

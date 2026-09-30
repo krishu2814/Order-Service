@@ -1,20 +1,16 @@
 const CouponService = require("../service/coupon-service");
+const { ForbiddenError, BadRequestError } = require("../utils/errors/app-error");
 
 class CouponController {
   constructor() {
     this.couponService = new CouponService();
   }
 
-  async createCoupon(req, res) {
+  async createCoupon(req, res, next) {
     try {
       const userRole = req.user?.role || req.user?.userRole;
       if (userRole !== "admin") {
-        return res.status(403).json({
-          success: false,
-          data: {},
-          message: "Forbidden: Only administrators can create coupons",
-          error: "Forbidden",
-        });
+        throw new ForbiddenError("Forbidden: Only administrators can create coupons", "COUPON_ADMIN_REQUIRED");
       }
 
       const coupon = await this.couponService.createCoupon(req.body);
@@ -25,16 +21,11 @@ class CouponController {
         error: {},
       });
     } catch (error) {
-      return res.status(400).json({
-        success: false,
-        data: {},
-        message: "Failed to create coupon",
-        error: error.message,
-      });
+      next(error);
     }
   }
 
-  async getActiveCoupons(req, res) {
+  async getActiveCoupons(req, res, next) {
     try {
       const coupons = await this.couponService.getActiveCoupons();
       return res.status(200).json({
@@ -44,20 +35,19 @@ class CouponController {
         error: {},
       });
     } catch (error) {
-      return res.status(500).json({
-        success: false,
-        data: [],
-        message: "Failed to retrieve coupons",
-        error: error.message,
-      });
+      next(error);
     }
   }
 
-  async validateCoupon(req, res) {
+  async validateCoupon(req, res, next) {
     try {
       const code = req.body.code || req.body.couponCode;
       const amount = req.body.amount || req.body.orderAmount || req.body.totalAmount;
       const userId = req.user?.id || req.user?.userId;
+
+      if (!code) {
+        throw new BadRequestError("Coupon code is required", "COUPON_CODE_REQUIRED");
+      }
 
       const result = await this.couponService.validateAndCalculateDiscount(
         code,
@@ -72,12 +62,7 @@ class CouponController {
         error: {},
       });
     } catch (error) {
-      return res.status(400).json({
-        success: false,
-        data: {},
-        message: error.message,
-        error: error.message,
-      });
+      next(error);
     }
   }
 }
