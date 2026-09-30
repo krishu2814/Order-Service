@@ -16,11 +16,21 @@ router.get(
   orderController.getUserOrders.bind(orderController),
 );
 router.get(
+  "/my-orders",
+  AuthenticUser,
+  orderController.getUserOrders.bind(orderController),
+);
+router.get(
   "/:id",
   AuthenticUser,
   orderController.getOrderById.bind(orderController),
 );
 router.post(
+  "/:id/cancel",
+  AuthenticUser,
+  orderController.cancelOrder.bind(orderController),
+);
+router.patch(
   "/:id/cancel",
   AuthenticUser,
   orderController.cancelOrder.bind(orderController),
